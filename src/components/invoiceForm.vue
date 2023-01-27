@@ -1,0 +1,257 @@
+<script setup>
+import { TrashIcon } from "@heroicons/vue/24/solid";
+import BaseInput from "./BaseInput.vue";
+import { useInvoiceStore } from "@/stores/user.js";
+import { uid } from "uid";
+import { onBeforeMount, ref, watch } from "vue";
+import { db } from "@/firebase";
+import { collection, addDoc } from "firebase/firestore";
+import { Form, Field, useForm, ErrorMessage, FieldArray } from "vee-validate";
+import * as yup from "yup";
+
+const dateOptions = { year: "numeric", month: "short", day: "numeric" };
+// Define a validation schema
+const schema = yup.object().shape({
+  BillerStreet: yup.string().required(),
+  Billercity: yup.string().required(),
+  Billercountry: yup.string().required(),
+  BillerzipCode: yup.number().integer().required(),
+
+  clientStreet: yup.string().required(),
+  Clientcity: yup.string().required(),
+  clientName: yup.string().required(),
+  Clientcountry: yup.string().required(),
+  ClientzipCode: yup.number().integer().required(),
+  Clientemail: yup.string().required("email is required").email(),
+  InvoiceDate: yup.date().default(() => new Date()),
+  paymentTerms: yup.string().required(),
+  paymentDue: yup.string().nullable(),
+  productDescription: yup.string().required(),
+});
+
+// store
+const userStore = useInvoiceStore();
+
+const dateValue = ref("");
+const priceTerm = ref("");
+const paymentDue = ref(null);
+const invoiceItemList = ref([]);
+const invoicePending = ref(null);
+const invoiceID = ref(null);
+
+//Set current Date
+onBeforeMount(() => {
+  dateValue.value = Date.now();
+  dateValue.value = new Date(dateValue.value).toLocaleDateString(
+    "en-us",
+    dateOptions
+  );
+});
+
+//set date ahead of current date
+watch(priceTerm, (newValue) => {
+  const date = new Date();
+  date.setDate(date.getDate() + parseInt(newValue));
+  paymentDue.value = new Date(date).toLocaleDateString("en-us", dateOptions);
+});
+
+// add items
+const increaseItem = () => {
+  invoiceItemList.value.push({
+    id: uid(),
+    itemName: "",
+    itemQty: "",
+    itemPrice: 0,
+    itemTotal: 0,
+  });
+};
+
+// Delete items
+const DeleteItems = (id) => {
+  invoiceItemList.value = invoiceItemList.value.filter(
+    (item) => item.id !== id
+  );
+};
+
+//Submit form
+const onSubmit = async (values, { resetForm }) => {
+  values.paymentDue = paymentDue.value;
+  values.invoiceItemList = invoiceItemList.value;
+  values.invoicePending = invoicePending.value;
+  values.invoiceID = invoiceID.value;
+  // Add data to firebase
+  const docRef = await addDoc(collection(db, "Invoice"), {
+    values,
+  });
+  userStore.user.push(values);
+  invoiceItemList.value = [];
+  resetForm();
+};
+
+const { resetForm } = useForm();
+// reset page
+const resetPage = () => {
+  alert("Your date will not be saved");
+  invoiceItemList.value = [];
+  resetForm;
+};
+</script>
+<template>
+  <div
+    name="list"
+    class="w-full md:w-1/2 bg-gray-700 relative transition ease-in z-10"
+    :class="{
+      'transition ease-out  -translate-x-full ': userStore.isShow,
+    }"
+  >
+    <div>
+      <h1 class="text-white capitalize text-3xl pl-3 pt-3 mb-10">
+        New Invoice
+      </h1>
+    </div>
+    <div>
+      <Form
+        @submit="onSubmit"
+        :validation-schema="schema"
+        class="px-5"
+        v-slot="{ errors }"
+      >
+        <p class="capitalize text-indigo-400">Bill From</p>
+        <BaseInput name="BillerStreet" label="Street Address" type="text" />
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <BaseInput name="Billercity" label="city" type="text" />
+          <BaseInput name="BillerzipCode" label="zip Code" type="number" />
+          <BaseInput name="Billercountry" label="Country" type="text" />
+        </div>
+        <p class="capitalize text-indigo-400 mt-3">Bill To</p>
+        <BaseInput name="clientName" label="client's Name" type="text" />
+        <BaseInput name="Clientemail" label="client's Email" type="email" />
+        <BaseInput name="clientStreet" label="Street Address" type="text" />
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <BaseInput name="Clientcity" label="city" type="text" />
+          <BaseInput name="ClientzipCode" label="zip Code" type="number" />
+          <BaseInput name="Clientcountry" label="Country" type="text" />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <BaseInput
+            name="InvoiceDate"
+            label="Invoice Date"
+            type="text"
+            disabled
+            :value="dateValue"
+          />
+
+          <div class="mt-3">
+            <label class="flex flex-col text-white capitalize" for="paymentDue"
+              >payment Due</label
+            >
+            <input
+              class="w-full p-2 outline-none rounded-md bg-white"
+              name="paymentDue"
+              type="text"
+              disabled
+              :value="paymentDue"
+            />
+          </div>
+        </div>
+
+        <div class="w-100 flex flex-col mt-3">
+          <lable class="text-white">Payment Terms</lable>
+          <Field
+            name="paymentTerms"
+            as="select"
+            class="p-2 outline-none rounded-md"
+            v-model="priceTerm"
+            :class="{ 'bg-red-200 ': errors.paymentTerms }"
+          >
+            <option value="30">30 Days</option>
+            <option value="60">60 Days</option>
+          </Field>
+          <span :class="{ 'text-red-500 ': errors.paymentTerms }">{{
+            errors.paymentTerms
+          }}</span>
+        </div>
+
+        <BaseInput
+          name="productDescription"
+          label="product Description"
+          type="text"
+        />
+        <h2 class="text-white my-3">Item Lists</h2>
+        <div>
+          <div v-for="(item, index) in invoiceItemList" :key="index">
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-4 mt-3">
+              <div class="flex flex-col col-span-2">
+                <label for="itemName" class="text-white">Item Name</label>
+                <input
+                  name="itemName"
+                  type="text"
+                  v-model="item.itemName"
+                  class="rounded-md p-2 outline-none"
+                />
+              </div>
+              <div class="flex flex-col">
+                <label for="itemQty" class="text-white">Qty</label>
+                <input
+                  name="itemQty"
+                  label="Qty"
+                  type="number"
+                  v-model="item.itemQty"
+                  class="rounded-md p-2 outline-none"
+                />
+              </div>
+              <div class="flex flex-col">
+                <label for="itemPrice" class="text-white">Price</label>
+                <input
+                  name="itemPrice"
+                  type="number"
+                  v-model="item.itemPrice"
+                  class="rounded-md p-2 outline-none"
+                />
+              </div>
+              <div class="flex flex-col">
+                <label for="itemTotal" class="text-white">Total</label>
+                <span
+                  name="itemTotal"
+                  type="number"
+                  class="bg-white rounded-md p-2 outline-none"
+                  >${{ (item.itemTotal = item.itemQty * item.itemPrice) }}</span
+                >
+              </div>
+              <div class="w-9 flex items-end ml-2 text-white cursor-pointer">
+                <TrashIcon @click="DeleteItems(item.id)" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="w-100 bg-black text-white text-center p-2 rounded-lg mt-10"
+          @click="increaseItem"
+        >
+          <button type="button">Add Item</button>
+        </div>
+
+        <div
+          class="my-14 grid grid-cols-1 md:grid-cols-2 gap-1 justify-items-center content-between h-32 md:h-02"
+        >
+          <button
+            class="text-white bg-red-400 rounded-full p-3 md:w-32 w-9/12 hover:bg-red-500"
+            type="reset"
+            @click="resetPage"
+          >
+            Discard
+          </button>
+          <button
+            class="text-white bg-indigo-400 rounded-full p-3 md:w-32 w-9/12 hover:bg-indigo-500"
+            type="submit"
+          >
+            Create Invoice
+          </button>
+        </div>
+      </Form>
+    </div>
+  </div>
+</template>
