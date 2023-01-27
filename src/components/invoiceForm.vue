@@ -36,8 +36,10 @@ const dateValue = ref("");
 const priceTerm = ref("");
 const paymentDue = ref(null);
 const invoiceItemList = ref([]);
-const invoicePending = ref(null);
+const invoicePending = ref("panding");
+const invoiceDraft = ref(null);
 const invoiceID = ref(null);
+const invoiceTotal = ref(0);
 
 //Set current Date
 onBeforeMount(() => {
@@ -73,12 +75,31 @@ const DeleteItems = (id) => {
   );
 };
 
+// calculate total invoice
+watch(invoiceItemList.value, (newValue) => {
+  invoiceTotal.value = 0;
+  newValue.forEach((item) => {
+    invoiceTotal.value += item.itemTotal;
+  });
+});
+
+// check invoice list is not empty
+const uploadInvoice = async () => {
+  if (invoiceItemList.value <= 0) {
+    alert("Please ensure to add atleast one invoice item ");
+    return;
+  }
+};
+
 //Submit form
 const onSubmit = async (values, { resetForm }) => {
   values.paymentDue = paymentDue.value;
   values.invoiceItemList = invoiceItemList.value;
   values.invoicePending = invoicePending.value;
   values.invoiceID = invoiceID.value;
+  values.invoiceTotal = invoiceTotal.value;
+  values.invoicePending = invoicePending.value;
+  uploadInvoice();
   // Add data to firebase
   const docRef = await addDoc(collection(db, "Invoice"), {
     values,
@@ -86,6 +107,8 @@ const onSubmit = async (values, { resetForm }) => {
   userStore.user.push(values);
   invoiceItemList.value = [];
   resetForm();
+  userStore.isShow = true;
+  window.location.reload();
 };
 
 const { resetForm } = useForm();

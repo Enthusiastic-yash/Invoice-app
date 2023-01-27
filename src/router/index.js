@@ -18,7 +18,8 @@ const router = createRouter({
     {
       path: "/invoiceDetail/:id",
       name: "invoiceDetail",
-      component: invoiceDetail,
+      // component: invoiceDetail,
+      component: () => import("../views/invoiceDetail.vue"),
     },
     {
       path: "/:pathMatch(.*)*",

@@ -2,12 +2,7 @@
 import { PlusCircleIcon, ChevronRightIcon } from "@heroicons/vue/24/solid";
 
 import { useInvoiceStore } from "@/stores/user.js";
-import { RouterLink, useRouter } from "vue-router";
-import { useRoute } from "vue-router";
-import { db } from "@/firebase";
-import InvoiceDetail from "../views/invoiceDetail.vue";
-
-const router = useRouter();
+import { RouterLink } from "vue-router";
 
 const userStore = useInvoiceStore();
 
@@ -26,7 +21,7 @@ const toggleForm = () => {
       class="text-white mt-5 col-start-3 col-end-12 md:flex md:justify-between md:items-center md:place-self-center"
     >
       <div class="flex justify-center md:self-end">
-        <h1 class="font-medium">Invoices(4)</h1>
+        <h1 class="font-medium">Invoices ({{ Userinfo.length }})</h1>
       </div>
       <div class="text-black flex justify-center items-end mt-4 md:ml-4">
         <label for="status" class="text-white capitalize md:leading-4"
@@ -59,14 +54,17 @@ const toggleForm = () => {
       v-for="user in Userinfo"
       :key="user.index"
     >
-      <RouterLink :to="{ name: 'invoiceDetail', params: { id: user.uid } }">
+      <RouterLink
+        v-if="typeof user.uid !== 'undefined'"
+        v-bind:to="{ name: 'invoiceDetail', params: { id: user.uid } }"
+      >
         <ul
           class="text-white bg-gray-800 flex justify-between p-2 md:p-4 rounded-md cursor-pointer my-8 max-w-7xl m-auto text-xs sm:text-sm md:text-lg"
         >
           <li>#{{ user.invoiceItemList[0].id.slice(0, 5) }}</li>
           <li>{{ user.InvoiceDate }}</li>
           <li>{{ user.clientName }}</li>
-          <li>${{ user.invoiceItemList[0].itemTotal }}</li>
+          <li>${{ user.invoiceTotal }}</li>
           <li class="text-yellow-500">panding</li>
           <li class="text-white items-end flex">
             <ChevronRightIcon

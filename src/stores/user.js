@@ -16,8 +16,6 @@ export const useInvoiceStore = defineStore("invoiceStore", () => {
       let docId = doc.id;
       userData.uid = docId;
       user.value.push(userData);
-
-      // console.log(doc.id, " => ", doc.data());
     });
   });
 

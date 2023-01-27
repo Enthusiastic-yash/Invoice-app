@@ -1,12 +1,13 @@
 <script setup>
 import { ChevronLeftIcon } from "@heroicons/vue/24/solid";
-import { RouterLink, useRoute } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import { onMounted, ref, reactive, watch } from "vue";
 
 import { db } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, deleteDoc } from "firebase/firestore";
 
 const route = useRoute();
+const router = useRouter();
 const userData = ref("");
 
 let userId = route.params.id;
@@ -23,6 +24,14 @@ onMounted(async () => {
     console.log("No such document!");
   }
 });
+
+// Delete invoice
+const deleteInvoice = (id) => {
+  deleteDoc(doc(db, "Invoice", id));
+  router.push({ name: "Home" });
+
+  console.log(id);
+};
 </script>
 <template>
   <div
@@ -51,6 +60,7 @@ onMounted(async () => {
               Edit
             </button>
             <button
+              @click="deleteInvoice(userId)"
               class="bg-red-400 text-white text-xs md:text-base rounded-full py-1 w-20"
             >
               Delete
@@ -130,10 +140,12 @@ onMounted(async () => {
             </div>
           </div>
           <!-- Total Amoutn Due -->
-          <div class="flex justify-between mt-4 px-1">
+          <div
+            class="flex justify-between mt-4 px-1 bg-gray-900 py-3 rounded-md sm:px-3 md:px-5"
+          >
             <p>Amount Due</p>
             <div class="flex justify-between">
-              <p></p>
+              <p>{{ userData.invoiceTotal }}</p>
             </div>
           </div>
         </div>
