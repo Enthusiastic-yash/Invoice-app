@@ -1,10 +1,10 @@
 <script setup>
 import { ChevronLeftIcon } from "@heroicons/vue/24/solid";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { onMounted, ref, reactive, watch } from "vue";
-
+import { onMounted, ref } from "vue";
+import { useInvoiceStore } from "@/stores/user.js";
 import { db } from "@/firebase";
-import { doc, getDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore";
 
 const route = useRoute();
 const router = useRouter();
@@ -32,6 +32,14 @@ const deleteInvoice = (id) => {
 
   console.log(id);
 };
+
+const paidInvoice = async (id) => {
+  const invoiceStatus = doc(db, "Invoice", id);
+
+  await updateDoc(invoiceStatus, {
+    "values.invoiceStatus": "paid",
+  });
+};
 </script>
 <template>
   <div
@@ -50,7 +58,7 @@ const deleteInvoice = (id) => {
       >
         <div class="flex self-start mb-3 md:mb-0 md:leading-6">
           <p>status</p>
-          <p>: Panding</p>
+          <p>: {{ userData.invoiceStatus }}</p>
         </div>
         <div>
           <div class="flex justify-between w-64 sm:w-64">
@@ -66,6 +74,7 @@ const deleteInvoice = (id) => {
               Delete
             </button>
             <button
+              @click="paidInvoice(userId)"
               class="bg-lime-400 text-white text-xs md:text-base rounded-full py-1 w-20"
             >
               Paid

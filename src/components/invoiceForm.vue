@@ -36,8 +36,7 @@ const dateValue = ref("");
 const priceTerm = ref("");
 const paymentDue = ref(null);
 const invoiceItemList = ref([]);
-const invoicePending = ref("panding");
-const invoiceDraft = ref(null);
+const invoiceStatus = ref("panding");
 const invoiceID = ref(null);
 const invoiceTotal = ref(0);
 
@@ -95,10 +94,10 @@ const uploadInvoice = async () => {
 const onSubmit = async (values, { resetForm }) => {
   values.paymentDue = paymentDue.value;
   values.invoiceItemList = invoiceItemList.value;
-  values.invoicePending = invoicePending.value;
+  values.invoiceStatus = invoiceStatus.value;
   values.invoiceID = invoiceID.value;
   values.invoiceTotal = invoiceTotal.value;
-  values.invoicePending = invoicePending.value;
+
   uploadInvoice();
   // Add data to firebase
   const docRef = await addDoc(collection(db, "Invoice"), {

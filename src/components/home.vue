@@ -8,6 +8,8 @@ const userStore = useInvoiceStore();
 
 let Userinfo = userStore.user;
 
+console.log(Userinfo);
+
 const toggleForm = () => {
   userStore.isShow = !userStore.isShow;
 };
@@ -65,7 +67,7 @@ const toggleForm = () => {
           <li>{{ user.InvoiceDate }}</li>
           <li>{{ user.clientName }}</li>
           <li>${{ user.invoiceTotal }}</li>
-          <li class="text-yellow-500">panding</li>
+          <li class="text-yellow-500">{{ user.invoiceStatus }}</li>
           <li class="text-white items-end flex">
             <ChevronRightIcon
               class="w-5 font-medium items-center text-indigo-400"
