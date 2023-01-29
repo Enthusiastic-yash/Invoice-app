@@ -1,28 +1,25 @@
 <script setup>
 import { ChevronLeftIcon } from "@heroicons/vue/24/solid";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { useInvoiceStore } from "@/stores/user.js";
 import { db } from "@/firebase";
-import { doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { doc, deleteDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
 const route = useRoute();
 const router = useRouter();
 const userData = ref("");
+const billStatus = ref("");
+const paidButttonStatus = ref("");
+const buttonStatusDetect = ref(false);
 
 let userId = route.params.id;
 
-onMounted(async () => {
-  const docRef = doc(db, "Invoice", userId);
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    const users = docSnap.data();
+onMounted(() => {
+  const docRef = onSnapshot(doc(db, "Invoice", userId), (doc) => {
+    const users = doc.data();
     userData.value = users.values;
-  } else {
-    // doc.data() will be undefined in this case
-    console.log("No such document!");
-  }
+  });
 });
 
 // Delete invoice
@@ -33,13 +30,41 @@ const deleteInvoice = (id) => {
   console.log(id);
 };
 
+//change bill status value based on buttonStatusDetect true or false
+const changeButton = computed(() => {
+  return buttonStatusDetect.value === true ? "paid" : "pending";
+});
+
 const paidInvoice = async (id) => {
+  buttonStatusDetect.value = !buttonStatusDetect.value;
+  billStatus.value = changeButton.value;
   const invoiceStatus = doc(db, "Invoice", id);
 
   await updateDoc(invoiceStatus, {
-    "values.invoiceStatus": "paid",
+    "values.invoiceStatus": billStatus.value,
   });
 };
+
+// Detect invoice status and change button inner text
+watch(userData, (newValue) => {
+  if (newValue.invoiceStatus === "paid") {
+    paidButttonStatus.value = "unpaid";
+  } else {
+    paidButttonStatus.value = "paid";
+  }
+});
+
+const buttonTextcolor = computed(() => {
+  return paidButttonStatus.value === "unpaid" ? "bg-yellow-500" : "bg-lime-400";
+});
+
+const billStatusColor = computed(() => {
+  return {
+    "text-yellow-500": userData.value.invoiceStatus === "pending",
+    "text-green-400": userData.value.invoiceStatus === "paid",
+    "text-gray-500": userData.value.invoiceStatus === "draft",
+  };
+});
 </script>
 <template>
   <div
@@ -58,7 +83,7 @@ const paidInvoice = async (id) => {
       >
         <div class="flex self-start mb-3 md:mb-0 md:leading-6">
           <p>status</p>
-          <p>: {{ userData.invoiceStatus }}</p>
+          <p :class="billStatusColor">: {{ userData.invoiceStatus }}</p>
         </div>
         <div>
           <div class="flex justify-between w-64 sm:w-64">
@@ -75,9 +100,10 @@ const paidInvoice = async (id) => {
             </button>
             <button
               @click="paidInvoice(userId)"
-              class="bg-lime-400 text-white text-xs md:text-base rounded-full py-1 w-20"
+              class="text-white text-xs md:text-base rounded-full py-1 w-20"
+              :class="buttonTextcolor"
             >
-              Paid
+              {{ paidButttonStatus }}
             </button>
           </div>
         </div>
