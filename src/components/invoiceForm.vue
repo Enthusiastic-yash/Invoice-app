@@ -107,7 +107,7 @@ const onSubmit = async (values, { resetForm }) => {
   invoiceItemList.value = [];
   resetForm();
   userStore.isShow = true;
-  window.location.reload();
+  // window.location.reload();
 };
 
 const { resetForm } = useForm();

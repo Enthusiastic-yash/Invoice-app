@@ -1,18 +1,28 @@
 <script setup>
 import { PlusCircleIcon, ChevronRightIcon } from "@heroicons/vue/24/solid";
-
+import { computed, watchEffect, ref } from "vue";
 import { useInvoiceStore } from "@/stores/user.js";
 import { RouterLink } from "vue-router";
-
+import noInvoice from "../assets/img/noinvoice.vue";
 const userStore = useInvoiceStore();
 
-let Userinfo = userStore.user;
+let Userinfo = ref("");
 
-console.log(Userinfo);
+watchEffect(function handler() {
+  Userinfo.value = userStore.user;
+});
 
 const toggleForm = () => {
   userStore.isShow = !userStore.isShow;
 };
+
+const billStatusColor = computed(() => {
+  return {
+    "text-yellow-500": Userinfo.value.invoiceStatus === "pending",
+    "text-green-400": Userinfo.value.invoiceStatus === "paid",
+    "text-gray-500": Userinfo.value.invoiceStatus === "draft",
+  };
+});
 </script>
 <template>
   <!-- Header -->
@@ -54,7 +64,7 @@ const toggleForm = () => {
     <div
       class="col-start-3 col-end-12 md:col-start-3"
       v-for="user in Userinfo"
-      :key="user.index"
+      :key="user.uid"
     >
       <RouterLink
         v-if="typeof user.uid !== 'undefined'"
@@ -75,6 +85,15 @@ const toggleForm = () => {
           </li>
         </ul>
       </RouterLink>
+    </div>
+    <!-- when no invoice -->
+    <div
+      v-if="Userinfo.length <= 0"
+      class="col-start-3 col-end-12 md:col-start-3"
+    >
+      <div class="w-1/2 m-auto mt-10">
+        <noInvoice />
+      </div>
     </div>
   </div>
 </template>

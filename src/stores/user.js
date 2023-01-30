@@ -1,25 +1,26 @@
-import { ref, onMounted } from "vue";
+import { ref, onMounted, reactive } from "vue";
 import { defineStore } from "pinia";
 import { db } from "@/firebase";
-import { collection, doc, getDocs } from "firebase/firestore";
+import { collection, doc, getDocs, onSnapshot } from "firebase/firestore";
 
 export const useInvoiceStore = defineStore("invoiceStore", () => {
   const user = ref([]);
   const isShow = ref(true);
 
   // Get data from firebase
-  onMounted(async () => {
-    const querySnapshot = await getDocs(collection(db, "Invoice"));
-    querySnapshot.forEach((doc) => {
-      // doc.data() is never undefined for query doc snapshots
-      let userData = doc.data().values;
-      let docId = doc.id;
-      userData.uid = docId;
-      user.value.push(userData);
+
+  onMounted(() => {
+    onSnapshot(collection(db, "Invoice"), (querySnapShot) => {
+      let userCollection = [];
+      querySnapShot.forEach((doc) => {
+        let userData = doc.data().values;
+        let docId = doc.id;
+        userData.uid = docId;
+        userCollection.push(userData);
+      });
+      user.value = userCollection;
     });
   });
-
-  // Add data to firebase
 
   return { user, isShow };
 });

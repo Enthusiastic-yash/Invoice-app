@@ -2,7 +2,7 @@
 import { ChevronLeftIcon } from "@heroicons/vue/24/solid";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { onMounted, ref, computed, watch } from "vue";
-import { useInvoiceStore } from "@/stores/user.js";
+// import { useInvoiceStore } from "@/stores/user.js";
 import { db } from "@/firebase";
 import { doc, deleteDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
@@ -15,8 +15,9 @@ const buttonStatusDetect = ref(false);
 
 let userId = route.params.id;
 
+// Get Data from backend
 onMounted(() => {
-  const docRef = onSnapshot(doc(db, "Invoice", userId), (doc) => {
+  onSnapshot(doc(db, "Invoice", userId), (doc) => {
     const users = doc.data();
     userData.value = users.values;
   });
@@ -26,8 +27,6 @@ onMounted(() => {
 const deleteInvoice = (id) => {
   deleteDoc(doc(db, "Invoice", id));
   router.push({ name: "Home" });
-
-  console.log(id);
 };
 
 //change bill status value based on buttonStatusDetect true or false
@@ -35,6 +34,7 @@ const changeButton = computed(() => {
   return buttonStatusDetect.value === true ? "paid" : "pending";
 });
 
+// Paid invoice
 const paidInvoice = async (id) => {
   buttonStatusDetect.value = !buttonStatusDetect.value;
   billStatus.value = changeButton.value;
