@@ -2,7 +2,7 @@
 import { ChevronLeftIcon } from "@heroicons/vue/24/solid";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { onMounted, ref, computed, watch } from "vue";
-// import { useInvoiceStore } from "@/stores/user.js";
+import { useInvoiceStore } from "@/stores/user.js";
 import { db } from "@/firebase";
 import { doc, deleteDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
@@ -13,6 +13,8 @@ const billStatus = ref("");
 const paidButttonStatus = ref("");
 const buttonStatusDetect = ref(false);
 
+const userStore = useInvoiceStore();
+
 let userId = route.params.id;
 
 // Get Data from backend
@@ -20,6 +22,7 @@ onMounted(() => {
   onSnapshot(doc(db, "Invoice", userId), (doc) => {
     const users = doc.data();
     userData.value = users.values;
+    userStore.getSingleInvoiceData(userData.value);
   });
 });
 
@@ -54,10 +57,12 @@ watch(userData, (newValue) => {
   }
 });
 
+// change button  color
 const buttonTextcolor = computed(() => {
   return paidButttonStatus.value === "unpaid" ? "bg-yellow-500" : "bg-lime-400";
 });
 
+// chagne bill status color
 const billStatusColor = computed(() => {
   return {
     "text-yellow-500": userData.value.invoiceStatus === "pending",
@@ -65,6 +70,11 @@ const billStatusColor = computed(() => {
     "text-gray-500": userData.value.invoiceStatus === "draft",
   };
 });
+
+const editInvoice = (userId) => {
+  userStore.isShow = false;
+  userStore.editInvoiceFun(userId);
+};
 </script>
 <template>
   <div
@@ -88,6 +98,7 @@ const billStatusColor = computed(() => {
         <div>
           <div class="flex justify-between w-64 sm:w-64">
             <button
+              @click="editInvoice(userId)"
               class="bg-gray-700 text-white text-xs md:text-base rounded-full py-1 w-20"
             >
               Edit

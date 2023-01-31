@@ -2,10 +2,11 @@
 import { TrashIcon } from "@heroicons/vue/24/solid";
 import BaseInput from "./BaseInput.vue";
 import { useInvoiceStore } from "@/stores/user.js";
+import { useRoute } from "vue-router";
 import { uid } from "uid";
-import { onBeforeMount, ref, watch } from "vue";
+import { onBeforeMount, ref, watch, computed, onMounted } from "vue";
 import { db } from "@/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, doc } from "firebase/firestore";
 import { Form, Field, useForm, ErrorMessage, FieldArray } from "vee-validate";
 import * as yup from "yup";
 
@@ -31,6 +32,63 @@ const schema = yup.object().shape({
 
 // store
 const userStore = useInvoiceStore();
+const isEditInvoiceTitle = useInvoiceStore();
+const invoiceTitle = ref("");
+
+// chagne invoice title
+watch(isEditInvoiceTitle, (newValue) => {
+  if (newValue.isEditInvoiceTitle === true) {
+    invoiceTitle.value = "Edit Invoice";
+  } else {
+    invoiceTitle.value = "New Invoice";
+  }
+});
+
+const userData = ref("");
+const userId = useRoute();
+
+watch(userData, (newValue) => {
+  console.log("this is user data", newValue);
+});
+
+watch(isEditInvoiceTitle, (newValue) => {
+  if (newValue.isEditInvoiceTitle === true) {
+    getdataoncall();
+  }
+});
+
+const initialValues = computed(() => {
+  if (isEditInvoiceTitle.isEditInvoiceTitle === true) {
+    return {
+      BillerStreet: userData.value.BillerStreet,
+      Billercity: userData.value.Billercity,
+      Billercountry: userData.value.Billercountry,
+      BillerzipCode: userData.value.BillerzipCode,
+      Clientcity: userData.value.Clientcity,
+      Clientcountry: userData.value.Clientcountry,
+      Clientemail: userData.value.Clientemail,
+      ClientzipCode: userData.value.ClientzipCode,
+      InvoiceDate: userData.value.InvoiceDate,
+      clientName: userData.value.clientName,
+      clientStreet: userData.value.clientStreet,
+      invoiceID: userData.value.invoiceID,
+      invoiceTotal: userData.value.invoiceTotal,
+      paymentDue: userData.value.paymentDue,
+      paymentTerms: userData.value.paymentTerms,
+      productDescription: userData.value.productDescription,
+
+      invoiceItemList: userData.value.invoiceItemList,
+    };
+  }
+});
+
+// Get Data from backend
+const getdataoncall = () => {
+  onSnapshot(doc(db, "Invoice", userId.params.id), (doc) => {
+    const users = doc.data();
+    userData.value = users.values;
+  });
+};
 
 const dateValue = ref("");
 const priceTerm = ref("");
@@ -56,7 +114,7 @@ watch(priceTerm, (newValue) => {
   paymentDue.value = new Date(date).toLocaleDateString("en-us", dateOptions);
 });
 
-// add items
+// add items to item list
 const increaseItem = () => {
   invoiceItemList.value.push({
     id: uid(),
@@ -100,14 +158,13 @@ const onSubmit = async (values, { resetForm }) => {
 
   uploadInvoice();
   // Add data to firebase
-  const docRef = await addDoc(collection(db, "Invoice"), {
+  await addDoc(collection(db, "Invoice"), {
     values,
   });
   userStore.user.push(values);
   invoiceItemList.value = [];
   resetForm();
   userStore.isShow = true;
-  // window.location.reload();
 };
 
 const { resetForm } = useForm();
@@ -115,6 +172,7 @@ const { resetForm } = useForm();
 const resetPage = () => {
   alert("Your date will not be saved");
   invoiceItemList.value = [];
+  userStore.isShow = true;
   resetForm;
 };
 </script>
@@ -128,15 +186,17 @@ const resetPage = () => {
   >
     <div>
       <h1 class="text-white capitalize text-3xl pl-3 pt-3 mb-10">
-        New Invoice
+        {{ invoiceTitle }}
       </h1>
     </div>
+
     <div>
       <Form
         @submit="onSubmit"
         :validation-schema="schema"
         class="px-5"
         v-slot="{ errors }"
+        :initial-values="initialValues"
       >
         <p class="capitalize text-indigo-400">Bill From</p>
         <BaseInput name="BillerStreet" label="Street Address" type="text" />
