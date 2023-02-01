@@ -4,10 +4,16 @@ import BaseInput from "./BaseInput.vue";
 import { useInvoiceStore } from "@/stores/user.js";
 import { useRoute } from "vue-router";
 import { uid } from "uid";
-import { onBeforeMount, ref, watch, computed, onMounted } from "vue";
+import { onBeforeMount, ref, watch, computed } from "vue";
 import { db } from "@/firebase";
-import { collection, addDoc, onSnapshot, doc } from "firebase/firestore";
-import { Form, Field, useForm, ErrorMessage, FieldArray } from "vee-validate";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+import { Form, Field, useForm } from "vee-validate";
 import * as yup from "yup";
 
 const dateOptions = { year: "numeric", month: "short", day: "numeric" };
@@ -47,13 +53,14 @@ watch(isEditInvoiceTitle, (newValue) => {
 const userData = ref("");
 const userId = useRoute();
 
-watch(userData, (newValue) => {
-  console.log("this is user data", newValue);
-});
+// watch(userData, (newValue) => {
+//   console.log("this is user data", newValue);
+// });
 
 watch(isEditInvoiceTitle, (newValue) => {
   if (newValue.isEditInvoiceTitle === true) {
     getdataoncall();
+    invoiceItemList.value = userData.value.invoiceItemList;
   }
 });
 
@@ -76,8 +83,6 @@ const initialValues = computed(() => {
       paymentDue: userData.value.paymentDue,
       paymentTerms: userData.value.paymentTerms,
       productDescription: userData.value.productDescription,
-
-      invoiceItemList: userData.value.invoiceItemList,
     };
   }
 });
@@ -150,21 +155,51 @@ const uploadInvoice = async () => {
 
 //Submit form
 const onSubmit = async (values, { resetForm }) => {
-  values.paymentDue = paymentDue.value;
-  values.invoiceItemList = invoiceItemList.value;
-  values.invoiceStatus = invoiceStatus.value;
-  values.invoiceID = invoiceID.value;
-  values.invoiceTotal = invoiceTotal.value;
+  console.log("i am click", values);
+  if (isEditInvoiceTitle.isEditInvoiceTitle === true) {
+    const updateInvoiceData = doc(db, "Invoice", userId.params.id);
 
-  uploadInvoice();
-  // Add data to firebase
-  await addDoc(collection(db, "Invoice"), {
-    values,
-  });
-  userStore.user.push(values);
-  invoiceItemList.value = [];
-  resetForm();
-  userStore.isShow = true;
+    await updateDoc(updateInvoiceData, {
+      "values.BillerStreet": values.BillerStreet,
+      "values.Billercity": values.Billercity,
+      "values.Billercountry": values.Billercountry,
+      "values.BillerzipCode": values.BillerzipCode,
+      "values.Clientcity": values.Clientcity,
+      "values.Clientcountry": values.Clientcountry,
+      "values.Clientemail": values.Clientemail,
+      "values.ClientzipCode": values.ClientzipCode,
+      "values.InvoiceDate": values.InvoiceDate,
+      "values.clientName": values.clientName,
+      "values.clientStreet": values.clientStreet,
+      "values.invoiceTotal": values.invoiceTotal,
+      "values.paymentDue": values.paymentDue,
+      "values.paymentTerms": values.paymentTerms,
+      "values.productDescription": values.productDescription,
+      "values.paymentDue": paymentDue.value,
+      "values.invoiceItemList": invoiceItemList.value,
+      "values.invoiceStatus": invoiceStatus.value,
+      "values.invoiceID": invoiceID.value,
+      "values.invoiceTotal": invoiceTotal.value,
+    });
+    uploadInvoice();
+    userStore.isShow = true;
+  } else {
+    values.paymentDue = paymentDue.value;
+    values.invoiceItemList = invoiceItemList.value;
+    values.invoiceStatus = invoiceStatus.value;
+    values.invoiceID = invoiceID.value;
+    values.invoiceTotal = invoiceTotal.value;
+
+    uploadInvoice();
+    // Add data to firebase
+    await addDoc(collection(db, "Invoice"), {
+      values,
+    });
+    userStore.user.push(values);
+    invoiceItemList.value = [];
+    resetForm();
+    userStore.isShow = true;
+  }
 };
 
 const { resetForm } = useForm();
@@ -173,6 +208,7 @@ const resetPage = () => {
   alert("Your date will not be saved");
   invoiceItemList.value = [];
   userStore.isShow = true;
+
   resetForm;
 };
 </script>
@@ -327,10 +363,18 @@ const resetPage = () => {
             Discard
           </button>
           <button
+            v-if="!isEditInvoiceTitle.isEditInvoiceTitle"
             class="text-white bg-indigo-400 rounded-full p-3 md:w-32 w-9/12 hover:bg-indigo-500"
             type="submit"
           >
             Create Invoice
+          </button>
+          <button
+            v-if="isEditInvoiceTitle.isEditInvoiceTitle"
+            class="text-white bg-indigo-400 rounded-full p-3 md:w-32 w-9/12 hover:bg-indigo-500"
+            type="submit"
+          >
+            Update
           </button>
         </div>
       </Form>

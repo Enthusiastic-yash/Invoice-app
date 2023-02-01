@@ -73,7 +73,7 @@ const billStatusColor = computed(() => {
         <ul
           class="text-white bg-gray-800 flex justify-between p-2 md:p-4 rounded-md cursor-pointer my-8 max-w-7xl m-auto text-xs sm:text-sm md:text-lg"
         >
-          <li>#{{ user.invoiceItemList[0].id.slice(0, 5) }}</li>
+          <li>#{{ user.uid.slice(0, 5) }}</li>
           <li>{{ user.InvoiceDate }}</li>
           <li>{{ user.clientName }}</li>
           <li>${{ user.invoiceTotal }}</li>
