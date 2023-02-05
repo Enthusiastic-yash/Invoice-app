@@ -27,3 +27,5 @@ npm run dev
 ```sh
 npm run build
 ```
+### play
+[Invoice](https://invoice-recode.netlify.app/)
