@@ -2,7 +2,7 @@ import { ref, onMounted, watch } from "vue";
 import { defineStore } from "pinia";
 import { db } from "@/firebase";
 import { useRoute } from "vue-router";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 export const useInvoiceStore = defineStore("invoiceStore", () => {
   const user = ref([]);
@@ -21,7 +21,7 @@ export const useInvoiceStore = defineStore("invoiceStore", () => {
     }
   });
 
-  // Get data from firebase
+  // Get All data from firebase
   onMounted(() => {
     onSnapshot(collection(db, "Invoice"), (querySnapShot) => {
       let userCollection = [];

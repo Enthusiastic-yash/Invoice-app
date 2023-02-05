@@ -67,7 +67,6 @@ const billStatusColor = computed(() => {
   return {
     "text-yellow-500": userData.value.invoiceStatus === "pending",
     "text-green-400": userData.value.invoiceStatus === "paid",
-    "text-gray-500": userData.value.invoiceStatus === "draft",
   };
 });
 
@@ -176,7 +175,7 @@ const editInvoice = (userId) => {
           <!-- Item details -->
           <div
             class="flex justify-between mt-4 px-1"
-            v-for="item in userData.invoiceItemList"
+            v-for="item in userData.items"
           >
             <p>{{ item.itemName }}</p>
             <div class="flex justify-between w-2/4">

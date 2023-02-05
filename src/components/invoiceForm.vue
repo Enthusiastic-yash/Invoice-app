@@ -4,7 +4,7 @@ import BaseInput from "./BaseInput.vue";
 import { useInvoiceStore } from "@/stores/user.js";
 import { useRoute } from "vue-router";
 import { uid } from "uid";
-import { onBeforeMount, ref, watch, computed } from "vue";
+import { onBeforeMount, ref, watch, computed, reactive } from "vue";
 import { db } from "@/firebase";
 import {
   collection,
@@ -13,27 +13,58 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
-import { Form, Field, useForm } from "vee-validate";
+import {
+  Form,
+  Field,
+  useForm,
+  FieldArray,
+  ErrorMessage,
+  useField,
+} from "vee-validate";
 import * as yup from "yup";
 
-const dateOptions = { year: "numeric", month: "short", day: "numeric" };
 // Define a validation schema
 const schema = yup.object().shape({
   BillerStreet: yup.string().required(),
   Billercity: yup.string().required(),
   Billercountry: yup.string().required(),
-  BillerzipCode: yup.number().integer().required(),
-
+  BillerzipCode: yup
+    .string()
+    .required()
+    .matches(/^[0-9]+$/, "Must be numeric"),
   clientStreet: yup.string().required(),
   Clientcity: yup.string().required(),
   clientName: yup.string().required(),
   Clientcountry: yup.string().required(),
-  ClientzipCode: yup.number().integer().required(),
+  ClientzipCode: yup
+    .string()
+    .required()
+    .matches(/^[0-9]+$/, "Must be numeric"),
   Clientemail: yup.string().required("email is required").email(),
   InvoiceDate: yup.date().default(() => new Date()),
   paymentTerms: yup.string().required(),
   paymentDue: yup.string().nullable(),
   productDescription: yup.string().required(),
+  invoiceTotal: yup.string(),
+  items: yup
+    .array()
+    .of(
+      yup.object().shape({
+        itemName: yup.string().required().label("Name"),
+        itemQty: yup
+          .string()
+          .required()
+          .label("Qty")
+          .matches(/^[0-9]+$/, "Must be numeric"),
+        itemPrice: yup
+          .string()
+          .required()
+          .label("Price")
+          .matches(/^[0-9]+$/, "Must be numeric"),
+        itemTotal: yup.string().label("Total"),
+      })
+    )
+    .strict(),
 });
 
 // store
@@ -53,37 +84,11 @@ watch(isEditInvoiceTitle, (newValue) => {
 const userData = ref("");
 const userId = useRoute();
 
-// watch(userData, (newValue) => {
-//   console.log("this is user data", newValue);
-// });
+// console.log(userData);
 
 watch(isEditInvoiceTitle, (newValue) => {
   if (newValue.isEditInvoiceTitle === true) {
     getdataoncall();
-    invoiceItemList.value = userData.value.invoiceItemList;
-  }
-});
-
-const initialValues = computed(() => {
-  if (isEditInvoiceTitle.isEditInvoiceTitle === true) {
-    return {
-      BillerStreet: userData.value.BillerStreet,
-      Billercity: userData.value.Billercity,
-      Billercountry: userData.value.Billercountry,
-      BillerzipCode: userData.value.BillerzipCode,
-      Clientcity: userData.value.Clientcity,
-      Clientcountry: userData.value.Clientcountry,
-      Clientemail: userData.value.Clientemail,
-      ClientzipCode: userData.value.ClientzipCode,
-      InvoiceDate: userData.value.InvoiceDate,
-      clientName: userData.value.clientName,
-      clientStreet: userData.value.clientStreet,
-      invoiceID: userData.value.invoiceID,
-      invoiceTotal: userData.value.invoiceTotal,
-      paymentDue: userData.value.paymentDue,
-      paymentTerms: userData.value.paymentTerms,
-      productDescription: userData.value.productDescription,
-    };
   }
 });
 
@@ -97,12 +102,11 @@ const getdataoncall = () => {
 
 const dateValue = ref("");
 const priceTerm = ref("");
-const paymentDue = ref(null);
-const invoiceItemList = ref([]);
+const paymentDue = ref("");
 const invoiceStatus = ref("panding");
-const invoiceID = ref(null);
 const invoiceTotal = ref(0);
 
+const dateOptions = { year: "numeric", month: "short", day: "numeric" };
 //Set current Date
 onBeforeMount(() => {
   dateValue.value = Date.now();
@@ -119,46 +123,61 @@ watch(priceTerm, (newValue) => {
   paymentDue.value = new Date(date).toLocaleDateString("en-us", dateOptions);
 });
 
-// add items to item list
-const increaseItem = () => {
-  invoiceItemList.value.push({
-    id: uid(),
-    itemName: "",
-    itemQty: "",
-    itemPrice: 0,
-    itemTotal: 0,
-  });
-};
+//Initialize invocie value
+const initialData = computed(() => {
+  if (isEditInvoiceTitle.isEditInvoiceTitle === true) {
+    return {
+      BillerStreet: userData.value.BillerStreet,
+      Billercity: userData.value.Billercity,
+      Billercountry: userData.value.Billercountry,
+      BillerzipCode: userData.value.BillerzipCode,
+      Clientcity: userData.value.Clientcity,
+      Clientcountry: userData.value.Clientcountry,
+      Clientemail: userData.value.Clientemail,
+      ClientzipCode: userData.value.ClientzipCode,
+      InvoiceDate: userData.value.InvoiceDate,
+      clientName: userData.value.clientName,
+      clientStreet: userData.value.clientStreet,
+      invoiceTotal: userData.value.invoiceTotal,
+      paymentDue: userData.value.paymentDue,
+      paymentTerms: userData.value.paymentTerms,
+      productDescription: userData.value.productDescription,
+      items: userData.value.items,
+    };
+  } else {
+    // var items = ["itemName", "itemQty", "itemPrice", "itemTotal"];
+    // var emptyValue = ["", "", "", ""];
 
-// Delete items
-const DeleteItems = (id) => {
-  invoiceItemList.value = invoiceItemList.value.filter(
-    (item) => item.id !== id
-  );
-};
+    // var newObj = {};
 
-// calculate total invoice
-watch(invoiceItemList.value, (newValue) => {
-  invoiceTotal.value = 0;
-  newValue.forEach((item) => {
-    invoiceTotal.value += item.itemTotal;
-  });
-});
+    // for (var i = 0; i < items.length; i++) {
+    //   items: {
+    //     newObj[items[i]] = emptyValue[i];
+    //   }
+    // }
 
-// check invoice list is not empty
-const uploadInvoice = async () => {
-  if (invoiceItemList.value <= 0) {
-    alert("Please ensure to add atleast one invoice item ");
-    return;
+    return {
+      items: [
+        {
+          itemName: "",
+          itemQty: "",
+          itemPrice: "",
+          itemTotal: "",
+        },
+      ],
+    };
   }
-};
+});
 
 //Submit form
 const onSubmit = async (values, { resetForm }) => {
   console.log("i am click", values);
   if (isEditInvoiceTitle.isEditInvoiceTitle === true) {
     const updateInvoiceData = doc(db, "Invoice", userId.params.id);
-
+    values.items.forEach((item) => {
+      invoiceTotal.value += parseInt(item.itemTotal);
+      values.invoiceTotal = invoiceTotal.value;
+    });
     await updateDoc(updateInvoiceData, {
       "values.BillerStreet": values.BillerStreet,
       "values.Billercity": values.Billercity,
@@ -171,32 +190,30 @@ const onSubmit = async (values, { resetForm }) => {
       "values.InvoiceDate": values.InvoiceDate,
       "values.clientName": values.clientName,
       "values.clientStreet": values.clientStreet,
-      "values.invoiceTotal": values.invoiceTotal,
       "values.paymentDue": values.paymentDue,
       "values.paymentTerms": values.paymentTerms,
       "values.productDescription": values.productDescription,
       "values.paymentDue": paymentDue.value,
-      "values.invoiceItemList": invoiceItemList.value,
       "values.invoiceStatus": invoiceStatus.value,
-      "values.invoiceID": invoiceID.value,
       "values.invoiceTotal": invoiceTotal.value,
+      "values.items": values.items,
     });
-    uploadInvoice();
+    resetForm();
     userStore.isShow = true;
   } else {
-    values.paymentDue = paymentDue.value;
-    values.invoiceItemList = invoiceItemList.value;
     values.invoiceStatus = invoiceStatus.value;
-    values.invoiceID = invoiceID.value;
-    values.invoiceTotal = invoiceTotal.value;
+    values.paymentDue = paymentDue.value;
 
-    uploadInvoice();
-    // Add data to firebase
+    // Add invoice totoal to value
+    values.items.forEach((item) => {
+      invoiceTotal.value += parseInt(item.itemTotal);
+      values.invoiceTotal = invoiceTotal.value;
+    });
+
+    // // Add data to firebase
     await addDoc(collection(db, "Invoice"), {
       values,
     });
-    userStore.user.push(values);
-    invoiceItemList.value = [];
     resetForm();
     userStore.isShow = true;
   }
@@ -205,8 +222,6 @@ const onSubmit = async (values, { resetForm }) => {
 const { resetForm } = useForm();
 // reset page
 const resetPage = () => {
-  alert("Your date will not be saved");
-  invoiceItemList.value = [];
   userStore.isShow = true;
 
   resetForm;
@@ -232,14 +247,14 @@ const resetPage = () => {
         :validation-schema="schema"
         class="px-5"
         v-slot="{ errors }"
-        :initial-values="initialValues"
+        :initial-values="initialData"
       >
         <p class="capitalize text-indigo-400">Bill From</p>
         <BaseInput name="BillerStreet" label="Street Address" type="text" />
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <BaseInput name="Billercity" label="city" type="text" />
-          <BaseInput name="BillerzipCode" label="zip Code" type="number" />
+          <BaseInput name="BillerzipCode" label="zip Code" type="text" />
           <BaseInput name="Billercountry" label="Country" type="text" />
         </div>
         <p class="capitalize text-indigo-400 mt-3">Bill To</p>
@@ -249,7 +264,7 @@ const resetPage = () => {
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <BaseInput name="Clientcity" label="city" type="text" />
-          <BaseInput name="ClientzipCode" label="zip Code" type="number" />
+          <BaseInput name="ClientzipCode" label="zip Code" type="text" />
           <BaseInput name="Clientcountry" label="Country" type="text" />
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -276,7 +291,7 @@ const resetPage = () => {
         </div>
 
         <div class="w-100 flex flex-col mt-3">
-          <lable class="text-white">Payment Terms</lable>
+          <label class="text-white">Payment Terms</label>
           <Field
             name="paymentTerms"
             as="select"
@@ -298,59 +313,78 @@ const resetPage = () => {
           type="text"
         />
         <h2 class="text-white my-3">Item Lists</h2>
-        <div>
-          <div v-for="(item, index) in invoiceItemList" :key="index">
+        <!-- Item lists start -->
+        <FieldArray name="items" v-slot="{ fields, push, remove }">
+          <fieldset v-for="(field, idx) in fields" :key="field.key">
             <div class="grid grid-cols-3 md:grid-cols-6 gap-4 mt-3">
               <div class="flex flex-col col-span-2">
-                <label for="itemName" class="text-white">Item Name</label>
-                <input
-                  name="itemName"
-                  type="text"
-                  v-model="item.itemName"
+                <label :for="`Name_${idx}`" class="text-white">Item Name</label>
+                <Field
+                  :id="`itemName_${idx}`"
+                  :name="`items[${idx}].itemName`"
                   class="rounded-md p-2 outline-none"
+                />
+                <ErrorMessage
+                  :name="`items[${idx}].itemName`"
+                  class="text-red-500"
                 />
               </div>
               <div class="flex flex-col">
-                <label for="itemQty" class="text-white">Qty</label>
-                <input
-                  name="itemQty"
-                  label="Qty"
-                  type="number"
-                  v-model="item.itemQty"
+                <label :for="`Qty_${idx}`" class="text-white">Qty</label>
+                <Field
+                  :id="`itemQty_${idx}`"
+                  :name="`items[${idx}].itemQty`"
                   class="rounded-md p-2 outline-none"
+                />
+                <ErrorMessage
+                  :name="`items[${idx}].itemQty`"
+                  class="text-red-500"
                 />
               </div>
               <div class="flex flex-col">
-                <label for="itemPrice" class="text-white">Price</label>
-                <input
-                  name="itemPrice"
-                  type="number"
-                  v-model="item.itemPrice"
+                <label :for="`Price_${idx}`" class="text-white">Price</label>
+                <Field
+                  :id="`itemPrice_${idx}`"
+                  :name="`items[${idx}].itemPrice`"
                   class="rounded-md p-2 outline-none"
                 />
+                <ErrorMessage
+                  :name="`items[${idx}].itemPrice`"
+                  class="text-red-500"
+                />
               </div>
+
               <div class="flex flex-col">
-                <label for="itemTotal" class="text-white">Total</label>
-                <span
-                  name="itemTotal"
-                  type="number"
+                <label for="Total" class="text-white">Total</label>
+
+                <Field
+                  :id="`itemTotal_${idx}`"
+                  :name="`items[${idx}].itemTotal`"
                   class="bg-white rounded-md p-2 outline-none"
-                  >${{ (item.itemTotal = item.itemQty * item.itemPrice) }}</span
-                >
+                  :model-value="`${
+                    field.value['itemQty'] * field.value['itemPrice']
+                  }`"
+                />
+
+                <ErrorMessage
+                  :name="`items[${idx}].itemTotal`"
+                  class="text-red-500"
+                />
               </div>
               <div class="w-9 flex items-end ml-2 text-white cursor-pointer">
-                <TrashIcon @click="DeleteItems(item.id)" />
+                <TrashIcon @click="remove(idx)" />
               </div>
             </div>
+          </fieldset>
+          <div
+            class="w-100 bg-black text-white text-center p-2 rounded-lg mt-10"
+            @click="
+              push({ itemPrice: '', itemQty: '', itemName: '', itemTotal: '' })
+            "
+          >
+            <button type="button">Add Item</button>
           </div>
-        </div>
-
-        <div
-          class="w-100 bg-black text-white text-center p-2 rounded-lg mt-10"
-          @click="increaseItem"
-        >
-          <button type="button">Add Item</button>
-        </div>
+        </FieldArray>
 
         <div
           class="my-14 grid grid-cols-1 md:grid-cols-2 gap-1 justify-items-center content-between h-32 md:h-02"

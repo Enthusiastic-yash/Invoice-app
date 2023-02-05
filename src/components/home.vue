@@ -7,6 +7,9 @@ import noInvoice from "../assets/img/noinvoice.vue";
 const userStore = useInvoiceStore();
 
 let Userinfo = ref("");
+let whatInvoiceStatus = ref("");
+
+console.log(whatInvoiceStatus.value);
 
 watchEffect(function handler() {
   Userinfo.value = userStore.user;
@@ -20,7 +23,6 @@ const billStatusColor = computed(() => {
   return {
     "text-yellow-500": Userinfo.value.invoiceStatus === "pending",
     "text-green-400": Userinfo.value.invoiceStatus === "paid",
-    "text-gray-500": Userinfo.value.invoiceStatus === "draft",
   };
 });
 </script>
@@ -41,12 +43,12 @@ const billStatusColor = computed(() => {
         >
         <select
           id="status"
+          v-model="whatInvoiceStatus"
           class="outline-none bg-gray-900 border-none text-white rounded-md text-center flex justify-center items-center mt-2 px-1 md:self-end md:ml-2"
         >
-          <option value="Draft">Draft</option>
+          <option value="clear">Clear</option>
           <option value="Panding">Panding</option>
           <option value="Paid">Paid</option>
-          <option value="clear Filter">Clear Filter</option>
         </select>
       </div>
       <div
@@ -77,7 +79,9 @@ const billStatusColor = computed(() => {
           <li>{{ user.InvoiceDate }}</li>
           <li>{{ user.clientName }}</li>
           <li>${{ user.invoiceTotal }}</li>
-          <li class="text-yellow-500">{{ user.invoiceStatus }}</li>
+          <li class="text-yellow-500">
+            {{ user.invoiceStatus }}
+          </li>
           <li class="text-white items-end flex">
             <ChevronRightIcon
               class="w-5 font-medium items-center text-indigo-400"
