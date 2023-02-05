@@ -84,8 +84,6 @@ watch(isEditInvoiceTitle, (newValue) => {
 const userData = ref("");
 const userId = useRoute();
 
-// console.log(userData);
-
 watch(isEditInvoiceTitle, (newValue) => {
   if (newValue.isEditInvoiceTitle === true) {
     getdataoncall();
@@ -171,7 +169,6 @@ const initialData = computed(() => {
 
 //Submit form
 const onSubmit = async (values, { resetForm }) => {
-  console.log("i am click", values);
   if (isEditInvoiceTitle.isEditInvoiceTitle === true) {
     const updateInvoiceData = doc(db, "Invoice", userId.params.id);
     values.items.forEach((item) => {

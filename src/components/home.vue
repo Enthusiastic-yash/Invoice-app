@@ -1,15 +1,12 @@
 <script setup>
 import { PlusCircleIcon, ChevronRightIcon } from "@heroicons/vue/24/solid";
-import { computed, watchEffect, ref } from "vue";
+import { watchEffect, ref } from "vue";
 import { useInvoiceStore } from "@/stores/user.js";
 import { RouterLink } from "vue-router";
 import noInvoice from "../assets/img/noinvoice.vue";
 const userStore = useInvoiceStore();
 
 let Userinfo = ref("");
-let whatInvoiceStatus = ref("");
-
-console.log(whatInvoiceStatus.value);
 
 watchEffect(function handler() {
   Userinfo.value = userStore.user;
@@ -18,13 +15,6 @@ watchEffect(function handler() {
 const toggleForm = () => {
   userStore.isShow = !userStore.isShow;
 };
-
-const billStatusColor = computed(() => {
-  return {
-    "text-yellow-500": Userinfo.value.invoiceStatus === "pending",
-    "text-green-400": Userinfo.value.invoiceStatus === "paid",
-  };
-});
 </script>
 <template>
   <!-- Header -->
@@ -37,20 +27,7 @@ const billStatusColor = computed(() => {
       <div class="flex justify-center md:self-end">
         <h1 class="font-medium">Invoices ({{ Userinfo.length }})</h1>
       </div>
-      <div class="text-black flex justify-center items-end mt-4 md:ml-4">
-        <label for="status" class="text-white capitalize md:leading-4"
-          >filter by status</label
-        >
-        <select
-          id="status"
-          v-model="whatInvoiceStatus"
-          class="outline-none bg-gray-900 border-none text-white rounded-md text-center flex justify-center items-center mt-2 px-1 md:self-end md:ml-2"
-        >
-          <option value="clear">Clear</option>
-          <option value="Panding">Panding</option>
-          <option value="Paid">Paid</option>
-        </select>
-      </div>
+
       <div
         class="w-32 bg-indigo-400 cursor-pointer outline-none rounded-full mt-5 p-1 m-auto md:ml-5 text-sm md:text-base"
         @click="toggleForm"
